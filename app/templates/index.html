@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ page_title }}</title>
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260413-7" />
+  </head>
+  <body>
+    <main class="page">
+      <div class="topbar">
+        <div class="topbar-user">Giriş yapan: {{ logged_in_username }}</div>
+        <form action="/logout" method="post">
+          <button type="submit" class="secondary-button">Çıkış Yap</button>
+        </form>
+      </div>
+
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Yerel Lead Paneli</p>
+          <h1>{{ page_title }}</h1>
+          <p class="subtitle">
+            Otomatik toplamaya geçmeden önce lead'leri yerel olarak toplayın, yönetin ve iletişim hazırlığını yapın.
+          </p>
+        </div>
+        <div class="hero-status">
+          <p class="hero-status-label">Günlük Akış</p>
+          <p class="hero-status-value">Lead topla, filtrele, takip et, iletişime geç</p>
+        </div>
+      </section>
+
+      <section class="stats-grid">
+        <div class="stat-card">
+          <p class="stat-label">Toplam Lead</p>
+          <p id="stat-total-leads" class="stat-value">0</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">Bu Sayfada</p>
+          <p id="stat-visible-leads" class="stat-value">0</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">Bugün Aranacaklar</p>
+          <p id="stat-today-followups" class="stat-value">0</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">Geciken Takipler</p>
+          <p id="stat-overdue-followups" class="stat-value">0</p>
+        </div>
+      </section>
+
+      <nav class="view-nav" aria-label="Panel bölümleri">
+        <button type="button" class="view-nav-button is-active" data-view-target="overview">Özet ve Tarama</button>
+        <button type="button" class="view-nav-button" data-view-target="leads">Lead Yönetimi</button>
+        <button type="button" class="view-nav-button" data-view-target="communication">İletişim Paneli</button>
+        <button type="button" class="view-nav-button" data-view-target="followup">Takip Paneli</button>
+      </nav>
+
+      <div id="view-overview" class="view-section is-active" data-view-section="overview">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Google Maps Tarayıcı</h2>
+          <p>Google Maps üzerinde arama yapıp sınırlı sayıda sonucu yerel veritabanına kaydedin.</p>
+          <p class="panel-note">Tarama birkaç saniye veya daha uzun sürebilir. Daha güvenli kullanım için düşük hacimli ve kontrollü tarama önerilir.</p>
+          <p id="scrape-cooldown-message" class="panel-note"></p>
+        </div>
+
+        <form id="scrape-form" class="lead-form">
+          <div class="field">
+            <label for="scrape-keyword">Anahtar Kelime</label>
+            <input id="scrape-keyword" name="keyword" type="text" placeholder="diş hekimi" required />
+          </div>
+          <div class="field">
+            <label for="scrape-location">Konum</label>
+            <input id="scrape-location" name="location" type="text" placeholder="İstanbul" required />
+          </div>
+          <div class="field">
+            <label for="scrape-max-results">Maksimum Sonuç</label>
+            <input id="scrape-max-results" name="max_results" type="number" min="1" max="100" value="10" required />
+          </div>
+
+          <div class="form-actions">
+            <button id="scrape-submit-button" type="submit">Tarama Başlat</button>
+            <button id="scrape-stop-button" type="button" class="secondary-button" disabled>Tarama Durdur</button>
+            <p id="scrape-message" class="form-message" aria-live="polite"></p>
+          </div>
+        </form>
+      </section>
+      </div>
+
+      <div id="view-leads" class="view-section" data-view-section="leads">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Lead Ekle</h2>
+          <p>Bir lead kaydını elle girip yerel SQLite veritabanına kaydedin.</p>
+        </div>
+
+        <form id="lead-form" class="lead-form">
+          <div class="field">
+            <label for="business_name">İşletme Adı</label>
+            <input id="business_name" name="business_name" type="text" placeholder="Örnek Diş Kliniği" required />
+          </div>
+          <div class="field">
+            <label for="phone">Telefon</label>
+            <input id="phone" name="phone" type="text" placeholder="+90 555 123 45 67" />
+          </div>
+          <div class="field">
+            <label for="email">E-posta</label>
+            <input id="email" name="email" type="email" placeholder="iletisim@ornek.com" />
+          </div>
+          <div class="field">
+            <label for="website">Website</label>
+            <input id="website" name="website" type="url" placeholder="https://ornek.com" />
+          </div>
+          <div class="field">
+            <label for="address">Adres</label>
+            <input id="address" name="address" type="text" placeholder="Örnek Mah. Örnek Cad." />
+          </div>
+          <div class="field">
+            <label for="category">Kategori</label>
+            <input id="category" name="category" type="text" placeholder="Diş Hekimi" />
+          </div>
+          <div class="field">
+            <label for="source">Kaynak</label>
+            <input id="source" name="source" type="text" placeholder="manual" />
+          </div>
+          <div class="field">
+            <label for="status">Durum</label>
+            <select id="status" name="status">
+              <option value="new">Yeni</option>
+              <option value="contacted">İletişim Kuruldu</option>
+              <option value="quoted">Teklif Verildi</option>
+              <option value="follow_up">Takip Ediliyor</option>
+              <option value="won">Kazanıldı</option>
+              <option value="lost">Kaybedildi</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="note">Not</label>
+            <input id="note" name="note" type="text" placeholder="Kısa not" />
+          </div>
+          <div class="field">
+            <label for="next_contact_date">Sonraki İletişim Tarihi</label>
+            <input id="next_contact_date" name="next_contact_date" type="date" />
+          </div>
+
+        <div class="form-actions">
+          <button id="submit-button" type="submit">Kaydet</button>
+          <p id="form-message" class="form-message" aria-live="polite"></p>
+        </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Kayıtlı Lead'ler</h2>
+          <p>Kayıtlar yerel API üzerinden listelenir.</p>
+        </div>
+
+        <form id="filter-form" class="filter-form">
+          <div class="field">
+            <label for="filter-query-label">Tarama Sorgusu</label>
+            <div id="filter-query-dropdown" class="multi-select">
+              <button id="filter-query-toggle" type="button" class="multi-select-toggle">
+                Tüm sorgular
+              </button>
+              <div id="filter-query-menu" class="multi-select-menu hidden"></div>
+            </div>
+          </div>
+          <div class="field">
+            <label for="filter-search">Arama</label>
+            <input id="filter-search" name="search" type="text" placeholder="İşletme, telefon, e-posta..." />
+          </div>
+          <div class="field">
+            <label for="filter-category">Kategori</label>
+            <input id="filter-category" name="category" type="text" placeholder="Kategori" />
+          </div>
+          <div class="field">
+            <label for="filter-status">Durum</label>
+            <select id="filter-status" name="status">
+              <option value="">Tüm durumlar</option>
+              <option value="new">Yeni</option>
+              <option value="contacted">İletişim Kuruldu</option>
+              <option value="quoted">Teklif Verildi</option>
+              <option value="follow_up">Takip Ediliyor</option>
+              <option value="won">Kazanıldı</option>
+              <option value="lost">Kaybedildi</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="filter-next-contact-date">Sonraki İletişim Tarihi</label>
+            <input id="filter-next-contact-date" name="next_contact_date" type="date" />
+          </div>
+          <div class="form-actions">
+            <button id="filter-button" type="submit">Filtrele</button>
+            <button id="clear-filters-button" type="button">Temizle</button>
+          </div>
+        </form>
+
+        <div class="export-actions action-toolbar">
+          <select id="bulk-status-select">
+            <option value="contacted">İletişim Kuruldu</option>
+            <option value="quoted">Teklif Verildi</option>
+            <option value="follow_up">Takip Ediliyor</option>
+            <option value="won">Kazanıldı</option>
+            <option value="lost">Kaybedildi</option>
+          </select>
+          <button id="bulk-status-button" type="button">Seçilenlerin Durumunu Güncelle</button>
+        </div>
+
+        <div class="export-actions action-toolbar">
+          <button id="export-all-csv-button" type="button">Tümünü CSV Olarak İndir</button>
+          <button id="export-all-excel-button" type="button">Tümünü Excel Olarak İndir</button>
+          <button id="export-selected-csv-button" type="button">Seçilenleri CSV Olarak İndir</button>
+          <button id="export-selected-excel-button" type="button">Seçilenleri Excel Olarak İndir</button>
+          <button id="clear-leads-button" type="button" class="danger-button">Listeyi Temizle</button>
+        </div>
+        <p id="export-message" class="form-message" aria-live="polite"></p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="checkbox-cell">
+                  <input id="select-all-leads" type="checkbox" aria-label="Tümünü Seç" />
+                </th>
+                <th>ID</th>
+                <th>İşletme Adı</th>
+                <th>Telefon</th>
+                <th>E-posta</th>
+                <th>Website</th>
+                <th>Adres</th>
+                <th>Kategori</th>
+                <th>Durum</th>
+                <th>E-posta Takibi</th>
+                <th>Not</th>
+                <th>Sonraki İletişim Tarihi</th>
+                <th>Oluşturulma Tarihi</th>
+                <th>İşlemler</th>
+              </tr>
+            </thead>
+            <tbody id="leads-table-body">
+              <tr>
+                <td colspan="14" class="empty-state">Kayıtlar yükleniyor...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination-controls">
+          <button id="prev-page-button" type="button" class="secondary-button">Önceki 10</button>
+          <div id="pagination-buttons" class="pagination-buttons"></div>
+          <p id="pagination-info" class="panel-note">Sayfa 1 / 1</p>
+          <button id="next-page-button" type="button" class="secondary-button">Sonraki 10</button>
+        </div>
+      </section>
+
+      </div>
+
+      <div id="view-communication" class="view-section" data-view-section="communication">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>İletişim Paneli</h2>
+          <p>Seçili kayıtlar için hızlı WhatsApp ve e-posta bağlantıları hazırlayın.</p>
+        </div>
+
+          <div class="prepared-panel">
+            <h3>Bu Sayfadaki Leadler</h3>
+            <p class="panel-note">Tum leadler burada 10'lu sayfalama ile listelenir. Checkbox ile secip cikarabilirsiniz.</p>
+            <div id="outreach-available-list" class="selected-outreach-list">
+              <p class="muted-value">Leadler yukleniyor...</p>
+            </div>
+            <div class="pagination-controls outreach-pagination">
+              <button id="outreach-prev-page-button" type="button" class="secondary-button">Onceki 10</button>
+              <div id="outreach-pagination-buttons" class="pagination-buttons"></div>
+              <p id="outreach-pagination-info" class="panel-note">Sayfa 1 / 1</p>
+              <button id="outreach-next-page-button" type="button" class="secondary-button">Sonraki 10</button>
+            </div>
+          </div>
+
+          <div class="communication-grid">
+            <div class="field">
+              <label for="whatsapp-message-template">WhatsApp Mesaj Şablonu</label>
+              <textarea id="whatsapp-message-template" rows="3">Merhaba {business_name}, firmanız için sunduğumuz hizmetler hakkında kısa bir görüşme yapmak isteriz.</textarea>
+            </div>
+            <div class="field">
+              <label for="email-subject-template">E-posta Konusu</label>
+              <input id="email-subject-template" type="text" value="Uygun bir zamanda kisa bir tanisma" />
+            </div>
+            <div class="field">
+              <label for="email-body-template">E-posta Şablonu</label>
+              <textarea id="email-body-template" rows="7">Merhaba {business_name},
+
+Firmanizin dijital tarafta neler yaptigini kisaca inceledik.
+Uygun olursa, size fayda saglayabilecegini dusundugumuz 1-2 fikri paylasmak isteriz.
+
+Ilginizi cekerse bu maile kisaca donmeniz yeterli.
+Uygun degilse haber vermeniz halinde tekrar yazmayiz.
+
+Tesekkurler.</textarea>
+            </div>
+          </div>
+
+          <div class="export-actions action-toolbar">
+            <button id="schedule-today-button" type="button">Seçilenleri Bugün Aranacaklara Ekle</button>
+            <button id="prepare-whatsapp-button" type="button">Seçilenleri WhatsApp İçin Hazırla</button>
+            <button id="prepare-email-button" type="button">Seçilenleri E-posta İçin Hazırla</button>
+          </div>
+          <p id="follow-up-action-message" class="form-message" aria-live="polite"></p>
+          <p id="whatsapp-prepare-message" class="form-message" aria-live="polite"></p>
+          <p id="email-prepare-message" class="form-message" aria-live="polite"></p>
+
+          <div id="selected-outreach-panel" class="prepared-panel">
+            <h3>Secili Kayitlar</h3>
+            <p class="panel-note">Bu sayfada hangi lead'lerle calisacaginizi buradan da yonetebilirsiniz.</p>
+            <div id="selected-outreach-list" class="selected-outreach-list">
+              <p class="muted-value">Secili kayit yok.</p>
+            </div>
+          </div>
+
+          <div id="whatsapp-prepared-panel" class="prepared-panel hidden">
+            <h3>Hazır WhatsApp Listesi</h3>
+            <div id="whatsapp-prepared-list" class="prepared-list"></div>
+          </div>
+
+          <div id="email-prepared-panel" class="prepared-panel hidden">
+            <h3>Hazır E-posta Listesi</h3>
+            <p class="panel-note">Not: `mailto:` sadece taslak acar. Gercek open, reply, bounce ve unsubscribe takibi icin mail servis webhook'u gerekir.</p>
+            <div id="email-prepared-list" class="prepared-list"></div>
+          </div>
+      </section>
+      </div>
+
+      <div id="view-followup" class="view-section" data-view-section="followup">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Takip Paneli</h2>
+          <p>Bugün aranacak ve gecikmiş takipleri hızlıca görün.</p>
+        </div>
+
+          <div class="follow-up-grid">
+            <div class="follow-up-card">
+              <h3>Bugün Aranacaklar</h3>
+              <div id="today-follow-up-list" class="follow-up-list">
+                <p class="muted-value">Yükleniyor...</p>
+              </div>
+            </div>
+            <div class="follow-up-card">
+              <h3>Geciken Takipler</h3>
+              <div id="overdue-follow-up-list" class="follow-up-list">
+                <p class="muted-value">Yükleniyor...</p>
+              </div>
+            </div>
+          </div>
+
+          <section id="edit-panel" class="panel nested-panel hidden">
+            <div class="panel-header">
+              <h2>Lead Düzenle</h2>
+              <p>Seçilen kaydın bilgilerini güncelleyin.</p>
+            </div>
+
+            <form id="edit-form" class="lead-form">
+              <input id="edit-id" type="hidden" />
+              <div class="field">
+                <label for="edit-business_name">İşletme Adı</label>
+                <input id="edit-business_name" name="business_name" type="text" required />
+              </div>
+              <div class="field">
+                <label for="edit-phone">Telefon</label>
+                <input id="edit-phone" name="phone" type="text" />
+              </div>
+              <div class="field">
+                <label for="edit-email">E-posta</label>
+                <input id="edit-email" name="email" type="email" />
+              </div>
+              <div class="field">
+                <label for="edit-website">Website</label>
+                <input id="edit-website" name="website" type="url" />
+              </div>
+              <div class="field">
+                <label for="edit-address">Adres</label>
+                <input id="edit-address" name="address" type="text" />
+              </div>
+              <div class="field">
+                <label for="edit-category">Kategori</label>
+                <input id="edit-category" name="category" type="text" />
+              </div>
+              <div class="field">
+                <label for="edit-source">Kaynak</label>
+                <input id="edit-source" name="source" type="text" />
+              </div>
+              <div class="field">
+                <label for="edit-status">Durum</label>
+                <select id="edit-status" name="status">
+                  <option value="new">Yeni</option>
+                  <option value="contacted">İletişim Kuruldu</option>
+                  <option value="quoted">Teklif Verildi</option>
+                  <option value="follow_up">Takip Ediliyor</option>
+                  <option value="won">Kazanıldı</option>
+                  <option value="lost">Kaybedildi</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="edit-note">Not</label>
+                <input id="edit-note" name="note" type="text" />
+              </div>
+              <div class="field">
+                <label for="edit-next_contact_date">Sonraki İletişim Tarihi</label>
+                <input id="edit-next_contact_date" name="next_contact_date" type="date" />
+              </div>
+
+              <div class="form-actions">
+                <button id="edit-submit-button" type="submit">Güncelle</button>
+                <button id="edit-cancel-button" type="button">İptal</button>
+                <p id="edit-message" class="form-message" aria-live="polite"></p>
+              </div>
+            </form>
+
+            <div class="activity-panel">
+              <div class="panel-header">
+                <h3>İletişim Geçmişi</h3>
+                <p>Bu lead için yapılan son iletişim hareketlerini kaydedin ve izleyin.</p>
+              </div>
+
+              <div class="export-actions action-toolbar">
+                <button type="button" class="small-button activity-action-button" data-activity-type="called">Arandı</button>
+                <button type="button" class="small-button activity-action-button whatsapp-button" data-activity-type="whatsapp_opened">WhatsApp Açıldı</button>
+                <button type="button" class="small-button activity-action-button email-button" data-activity-type="email_opened">E-posta Açıldı</button>
+                <button type="button" class="small-button activity-action-button email-replied-button" data-activity-type="email_replied">Yanit Geldi</button>
+                <button type="button" class="small-button activity-action-button warning-button" data-activity-type="email_bounced">Bounce</button>
+                <button type="button" class="small-button activity-action-button danger-button" data-activity-type="email_unsubscribed">Liste Disi</button>
+                <button type="button" class="small-button activity-action-button secondary-button" data-activity-type="quoted">Teklif Verildi</button>
+              </div>
+
+              <div class="activity-note-row">
+                <input id="activity-note-input" type="text" placeholder="Kısa iletişim notu ekleyin" />
+                <button id="add-activity-note-button" type="button" class="secondary-button">Not Ekle</button>
+              </div>
+              <p id="activity-message" class="form-message" aria-live="polite"></p>
+
+              <div id="activity-list" class="activity-list">
+                <p class="muted-value">Geçmiş yükleniyor...</p>
+              </div>
+            </div>
+          </section>
+      </section>
+      </div>
+    </main>
+
+    <script src="/static/js/app.js?v=20260413-7" defer></script>
+  </body>
+</html>

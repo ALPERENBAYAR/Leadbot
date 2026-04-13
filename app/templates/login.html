@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ page_title }}</title>
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260413-7" />
+  </head>
+  <body class="login-body">
+    <main class="login-page">
+      <section class="login-card">
+        <p class="eyebrow">LeadBot</p>
+        <h1>Giriş Yap</h1>
+        <p class="subtitle">Panele erişmek için kullanıcı adı ve şifrenizi girin.</p>
+
+        <form method="post" action="/login" class="login-form">
+          <div class="field">
+            <label for="username">Kullanıcı Adı</label>
+            <input id="username" name="username" type="text" autocomplete="username" required />
+          </div>
+          <div class="field">
+            <label for="password">Şifre</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required />
+          </div>
+
+          <button type="submit">Giriş Yap</button>
+          <p class="form-message is-error" aria-live="polite">{{ login_error }}</p>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>
