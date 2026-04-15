@@ -53,9 +53,14 @@ BLOCK_PATTERNS = (
     "olağandışı trafik",
     "sorry, but your computer or network may be sending automated queries",
     "detected unusual traffic",
-    "captcha",
     "i'm not a robot",
     "ben robot değilim",
+)
+CONSENT_BUTTON_SELECTORS = (
+    'button:has-text("Tümünü kabul et")',
+    'button[aria-label="Tümünü kabul et"]',
+    'button:has-text("Accept all")',
+    'button[aria-label="Accept all"]',
 )
 
 
@@ -94,21 +99,8 @@ def scrape_google_maps(
             wait_until="domcontentloaded",
             timeout=60000,
         )
+        _handle_google_consent(page)
         _raise_if_google_blocked(page)
-
-        try:
-            page.locator('button:has-text("Accept all")').click(timeout=5000)
-        except PlaywrightTimeoutError:
-            pass
-        except Exception:
-            pass
-
-        for selector in ['button:has-text("Tümünü kabul et")', 'button:has-text("Kabul et")']:
-            try:
-                page.locator(selector).click(timeout=3000)
-                break
-            except Exception:
-                continue
 
         _wait_for_results(page)
         scroll_container = _find_scroll_container(page)
@@ -191,6 +183,7 @@ def _wait_for_results(page) -> None:
             page.wait_for_selector(selector, timeout=15000)
             return
         except PlaywrightTimeoutError:
+            _handle_google_consent(page)
             _raise_if_google_blocked(page)
             continue
 
@@ -543,8 +536,31 @@ def _pause(page, min_ms: int, max_ms: int) -> None:
     page.wait_for_timeout(randint(min_ms, max_ms))
 
 
+def _handle_google_consent(page) -> None:
+    if "consent.google.com" not in page.url:
+        return
+
+    for selector in CONSENT_BUTTON_SELECTORS:
+        try:
+            button = page.locator(selector).first
+            if button.count() == 0:
+                continue
+
+            button.click(timeout=5000)
+            page.wait_for_load_state("domcontentloaded", timeout=10000)
+            try:
+                page.wait_for_url(lambda url: "consent.google.com" not in url, timeout=10000)
+            except PlaywrightTimeoutError:
+                pass
+            return
+        except Exception:
+            continue
+
+
 def _raise_if_google_blocked(page) -> None:
     try:
+        if "consent.google.com" in page.url:
+            return
         content = page.content().lower()
     except Exception:
         return
