@@ -62,6 +62,8 @@ CONSENT_BUTTON_SELECTORS = (
     'button:has-text("Accept all")',
     'button[aria-label="Accept all"]',
 )
+GOOGLE_MAPS_TITLE_SUFFIXES = (" - Google Maps", " - Google Haritalar")
+LEADING_ICON_CHARS = {"\ue0b0", "\ue0c8", "\ue88e"}
 
 
 class ScrapeCancelled(Exception):
@@ -263,9 +265,9 @@ def _extract_info_value(page, labels: Iterable[str]) -> str | None:
                 text = button.inner_text(timeout=3000).strip()
                 cleaned = text.replace(f"{label}:", "").strip()
                 if cleaned and cleaned != text:
-                    return cleaned
+                    return _clean_extracted_text(cleaned)
                 if cleaned:
-                    return cleaned
+                    return _clean_extracted_text(cleaned)
         except Exception:
             continue
 
@@ -282,7 +284,7 @@ def _extract_info_value(page, labels: Iterable[str]) -> str | None:
             if button.count() > 0:
                 text = button.inner_text(timeout=3000).strip()
                 if text:
-                    return text
+                    return _clean_extracted_text(text)
         except Exception:
             continue
 
@@ -322,7 +324,7 @@ def _extract_category(page) -> str | None:
             if locator.count() > 0:
                 text = locator.inner_text(timeout=3000).strip()
                 if text and len(text) < 120 and not text.startswith("Yorum"):
-                    return text
+                    return _clean_extracted_text(text)
         except Exception:
             continue
 
@@ -362,7 +364,10 @@ def _extract_business_name(page) -> str:
         title = ""
 
     if title:
-        cleaned_title = title.split(" - Google Maps", 1)[0].strip()
+        cleaned_title = title
+        for suffix in GOOGLE_MAPS_TITLE_SUFFIXES:
+            cleaned_title = cleaned_title.split(suffix, 1)[0]
+        cleaned_title = cleaned_title.strip()
         if _is_valid_business_name(cleaned_title):
             return cleaned_title
 
@@ -530,6 +535,18 @@ def _normalize_website_url(website_url: str) -> str | None:
         return None
 
     return f"{parsed.scheme}://{parsed.netloc}"
+
+
+def _clean_extracted_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+
+    cleaned = value
+    for icon in LEADING_ICON_CHARS:
+        cleaned = cleaned.replace(icon, " ")
+
+    cleaned = " ".join(cleaned.split()).strip()
+    return cleaned or None
 
 
 def _pause(page, min_ms: int, max_ms: int) -> None:
