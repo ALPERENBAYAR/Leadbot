@@ -602,7 +602,8 @@ async function loadOutreachAvailableLeads() {
 
   outreachAvailableList.innerHTML = '<p class="muted-value">Leadler yukleniyor...</p>';
 
-  const response = await fetch(`/api/leads?limit=${pageSize}&offset=${(outreachCurrentPage - 1) * pageSize}`);
+  const params = getLeadListParams(outreachCurrentPage);
+  const response = await fetch(`/api/leads?${params.toString()}`);
   if (!response.ok) {
     throw new Error("Outreach leadleri yuklenemedi.");
   }
@@ -760,6 +761,13 @@ function getFilterParams() {
   return params;
 }
 
+function getLeadListParams(page) {
+  const params = getFilterParams();
+  params.set("limit", String(pageSize));
+  params.set("offset", String((page - 1) * pageSize));
+  return params;
+}
+
 async function loadQueryOptions() {
   const selectedValues = [...selectedQueryLabels];
   const response = await fetch("/api/leads/query-options");
@@ -798,6 +806,12 @@ function updateQueryToggleLabel() {
   }
 
   filterQueryToggle.textContent = `${selectedQueryLabels.length} sorgu seçildi`;
+}
+
+function syncQueryMenuSelection() {
+  filterQueryMenu.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+    input.checked = selectedQueryLabels.includes(input.value);
+  });
 }
 
 function renderLeads(leads) {
@@ -860,7 +874,6 @@ function renderLeads(leads) {
     visibleLeads: leads.length,
   });
   updateSelectAllState();
-  renderAvailableOutreachLeads(leads);
 }
 
 function updatePaginationControls() {
@@ -910,10 +923,7 @@ function buildVisiblePages(totalPages, activePage) {
 }
 
 async function loadLeads() {
-  const params = getFilterParams();
-  params.set("limit", String(pageSize));
-  params.set("offset", String((currentPage - 1) * pageSize));
-
+  const params = getLeadListParams(currentPage);
   const response = await fetch(`/api/leads?${params.toString()}`);
   if (!response.ok) {
     throw new Error("Kayıtlar yüklenemedi.");
@@ -1213,9 +1223,11 @@ scrapeStopButton.addEventListener("click", async () => {
 filterForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   goToFirstPage();
+  outreachCurrentPage = 1;
 
   try {
     await loadLeads();
+    refreshOutreachSelectionPanels();
     setExportMessage("Filtre sonuçları yüklendi.", "success");
   } catch (error) {
     setExportMessage(error.message, "error");
@@ -1225,11 +1237,14 @@ filterForm.addEventListener("submit", async (event) => {
 clearFiltersButton.addEventListener("click", async () => {
   filterForm.reset();
   selectedQueryLabels = [];
+  syncQueryMenuSelection();
   updateQueryToggleLabel();
   goToFirstPage();
+  outreachCurrentPage = 1;
 
   try {
     await loadLeads();
+    refreshOutreachSelectionPanels();
     setExportMessage("Filtreler temizlendi.", "success");
   } catch (error) {
     setExportMessage(error.message, "error");
