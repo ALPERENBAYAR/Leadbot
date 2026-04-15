@@ -80,6 +80,7 @@ let outreachCurrentPage = 1;
 let outreachTotalLeadCount = 0;
 let selectedQueryLabels = [];
 let activeView = "overview";
+let editPanelReturnView = null;
 const selectedLeadIds = new Set();
 const selectedLeadCache = new Map();
 const statusLabels = {
@@ -1146,7 +1147,10 @@ async function openEditPanel(leadId) {
     return;
   }
 
-  setActiveView("followup");
+  editPanelReturnView = activeView;
+  if (activeView !== "followup") {
+    setActiveView("followup");
+  }
   document.getElementById("edit-id").value = lead.id;
   document.getElementById("edit-business_name").value = lead.business_name || "";
   document.getElementById("edit-phone").value = lead.phone || "";
@@ -1174,6 +1178,10 @@ function closeEditPanel() {
   setActivityMessage("");
   activityNoteInput.value = "";
   activityList.innerHTML = '<p class="muted-value">Geçmiş yükleniyor...</p>';
+  if (editPanelReturnView && editPanelReturnView !== activeView) {
+    setActiveView(editPanelReturnView);
+  }
+  editPanelReturnView = null;
 }
 
 viewNavButtons.forEach((button) => {
@@ -1678,7 +1686,12 @@ editForm.addEventListener("submit", async (event) => {
     goToFirstPage();
     await loadFollowUpSummary();
     await loadLeads();
-    setEditMessage("Lead güncellendi.", "success");
+    if (editPanelReturnView && editPanelReturnView !== "followup") {
+      closeEditPanel();
+      setExportMessage("Lead güncellendi.", "success");
+    } else {
+      setEditMessage("Lead güncellendi.", "success");
+    }
   } catch (error) {
     setEditMessage(error.message, "error");
   }
